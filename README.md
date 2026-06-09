@@ -1,4 +1,4 @@
-# Project README
+# ForestPlotUDA
 
 This project is built upon the **Pointcept** codebase, which is a powerful and flexible framework for point cloud perception research. You can find more information about Pointcept [here](https://github.com/Pointcept/Pointcept).
 
