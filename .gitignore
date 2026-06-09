@@ -1,0 +1,15 @@
+/data
+/work_dirs
+
+
+/debug_prompts
+/image_segment
+/pseudo_label_vis
+/segmentation_debug
+/*.sh
+
+__pycache__
+.history
+.vscode
+
+libs/pointops/build/
