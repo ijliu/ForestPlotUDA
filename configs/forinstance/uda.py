@@ -21,7 +21,7 @@ mix_prob = 0
 empty_cache = False
 enable_amp = True
 gsize = 0.2
-seed = 0
+# seed = 2026
 # clip_grad = 1.0
 evaluate = False
 
@@ -119,10 +119,10 @@ teacher = dict(
 # scheduler settings
 eval_epoch = 100
 epoch = 100
-optimizer = dict(type="AdamW", lr=0.0002, weight_decay=0.05)
+optimizer = dict(type="AdamW", lr=0.0001, weight_decay=0.05)
 scheduler = dict(
     type="OneCycleLR",
-    max_lr=[0.0002, 0.00001],
+    max_lr=[0.0001, 0.00001],
     pct_start=0.05,
     anneal_strategy="cos",
     div_factor=10.0,
@@ -168,7 +168,7 @@ data = dict(
                 mode="train",
                 return_grid_coord=True,
             ),
-            dict(type="CylinderCrop", radius=4, point_max=1024000, mode='random'),
+            dict(type="CylinderCrop", radius=4, point_max=102400, mode='random'),
             dict(type="CenterShift", apply_z=False),
             dict(type="ToTensor"),
             dict(

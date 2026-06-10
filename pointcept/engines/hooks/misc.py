@@ -293,26 +293,23 @@ class UDACheckpointLoader(HookBase):
                 #     for i in range(5):
                 #         new_key = key.replace('proj_skip.1', f"proj_skip.1.norm.{i}")
                 #         weight[new_key] = value
-                # if 'norm2' in key:            ######### LN ############
-                #     for i in range(5):
-                #         new_key = key.replace("norm2.0",f"norm2.0.norm.{i}")
-                #         weight[new_key] = value
-                # elif 'norm1' in key:
-                #     for i in range(5):
-                #         new_key = key.replace("norm1.0",f"norm1.0.norm.{i}")
-                #         weight[new_key] = value
-                # elif 'cpe.2' in key:
-                #     for i in range(5):
-                #         new_key = key.replace("cpe.2",f"cpe.2.norm.{i}")
-                #         weight[new_key] = value
-                # else:
-                #     weight[key] = value
-                weight[key] = value
+                if 'norm2' in key:            ######### LN ############
+                    for i in range(5):
+                        new_key = key.replace("norm2.0",f"norm2.0.norm.{i}")
+                        weight[new_key] = value
+                elif 'norm1' in key:
+                    for i in range(5):
+                        new_key = key.replace("norm1.0",f"norm1.0.norm.{i}")
+                        weight[new_key] = value
+                elif 'cpe.2' in key:
+                    for i in range(5):
+                        new_key = key.replace("cpe.2",f"cpe.2.norm.{i}")
+                        weight[new_key] = value
+                else:
+                    weight[key] = value
+                # weight[key] = value
                 #########
             
-            # for key in weight.keys():
-            #     print(key)
-            # # exit()
             # print("============")
 
             ## Student 

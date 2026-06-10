@@ -116,212 +116,177 @@ class TesterBase:
 
 
 
+if True:
 
+    import os
+    import numpy as np
+    import torch
+    import matplotlib
+    import matplotlib.pyplot as plt
+    from sklearn.decomposition import PCA
+    from sklearn.manifold import TSNE
 
+    # =========================
+    # 字体设置（Times New Roman）
+    # =========================
+    matplotlib.rcParams['font.family'] = 'DejaVu Serif'
+    matplotlib.rcParams['font.size'] = 12
 
+    # =========================
+    # Semantic classes
+    # =========================
+    CLASS_NAMES = {
+        0: "Terrain",
+        1: "Understory",
+        2: "Wood",
+        3: "Leaf",
+    }
 
+    # =========================
+    # 工具函数
+    # =========================
+    def to_numpy(x):
+        if isinstance(x, torch.Tensor):
+            return x.detach().cpu().numpy()
+        return np.asarray(x)
 
+    def subsample(features, labels, max_points=20000, seed=0):
+        n = features.shape[0]
+        if n <= max_points:
+            return features, labels
+        rng = np.random.RandomState(seed)
+        idx = rng.choice(n, max_points, replace=False)
+        return features[idx], labels[idx]
 
+    def save_2d_scatter(X, y, save_path, show_axis=False, s=2, alpha=0.6):
+        plt.figure(figsize=(6, 6))
+        for cls in range(4):
+            mask = (y == cls)
+            if mask.any():
+                plt.scatter(X[mask, 0], X[mask, 1], s=s, alpha=alpha, label=CLASS_NAMES[cls])
+        if show_axis:
+            plt.xlabel("Dim 1")
+            plt.ylabel("Dim 2")
+        else:
+            plt.axis("off")
+        plt.legend(frameon=False, markerscale=2)
+        plt.tight_layout(pad=0)
+        plt.savefig(save_path, dpi=600, bbox_inches="tight")
+        plt.close()
 
+    def save_3d_scatter(X, y, save_path, show_axis=False, s=2, alpha=0.6):
+        fig = plt.figure(figsize=(6, 6))
+        ax = fig.add_subplot(111, projection="3d")
+        for cls in range(4):
+            mask = (y == cls)
+            if mask.any():
+                ax.scatter(
+                    X[mask, 0],
+                    X[mask, 1],
+                    X[mask, 2],
+                    s=s,
+                    alpha=alpha,
+                    label=CLASS_NAMES[cls]
+                )
+        if show_axis:
+            ax.set_xlabel("Dim 1")
+            ax.set_ylabel("Dim 2")
+            ax.set_zlabel("Dim 3")
+        else:
+            ax.set_axis_off()
+        ax.legend(frameon=False, markerscale=2)
+        plt.tight_layout(pad=0)
+        plt.savefig(save_path, dpi=600, bbox_inches="tight")
+        plt.close()
 
+    # =========================
+    # 主函数
+    # =========================
+    def visualize_point_features(
+        point_feat,          # [N, C]
+        labels,              # [N] 0~3
+        out_dir="./vis",
+        file_prefix="",      # 新增：文件名前缀
+        max_points=10000,
+        pca_dim=32,
+        tsne_perplexity=30,
+        tsne_lr=200,
+        tsne_iter=1000,
+        seed=0,
+        show_axis=False
+    ):
+        os.makedirs(out_dir, exist_ok=True)
 
+        X = to_numpy(point_feat)
+        y = to_numpy(labels).astype(np.int64)
 
+        X, y = subsample(X, y, max_points=max_points, seed=seed)
 
+        # -----------------------------
+        # PCA 2D
+        # -----------------------------
+        X_pca2 = PCA(n_components=2, random_state=seed).fit_transform(X)
+        save_2d_scatter(
+            X_pca2, y,
+            save_path=os.path.join(out_dir, f"{file_prefix}pca_2d.png"),
+            show_axis=show_axis
+        )
 
-import os
-import numpy as np
-import torch
-import matplotlib
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
+        # -----------------------------
+        # PCA 3D
+        # -----------------------------
+        X_pca3 = PCA(n_components=3, random_state=seed).fit_transform(X)
+        save_3d_scatter(
+            X_pca3, y,
+            save_path=os.path.join(out_dir, f"{file_prefix}pca_3d.png"),
+            show_axis=show_axis
+        )
 
-# =========================
-# 字体设置（Times New Roman）
-# =========================
-matplotlib.rcParams['font.family'] = 'DejaVu Serif'
-matplotlib.rcParams['font.size'] = 12
+        # -----------------------------
+        # t-SNE 2D
+        # -----------------------------
+        X_pre = PCA(n_components=min(pca_dim, X.shape[1]), random_state=seed).fit_transform(X)
+        tsne2d = TSNE(
+            n_components=2,
+            perplexity=tsne_perplexity,
+            learning_rate=tsne_lr,
+            max_iter=tsne_iter,
+            init="pca",
+            random_state=seed,
+            verbose=0
+        )
+        X_tsne2 = tsne2d.fit_transform(X_pre)
+        save_2d_scatter(
+            X_tsne2, y,
+            save_path=os.path.join(out_dir, f"{file_prefix}tsne_2d.png"),
+            show_axis=show_axis
+        )
 
-# =========================
-# Semantic classes
-# =========================
-CLASS_NAMES = {
-    0: "Terrain",
-    1: "Understory",
-    2: "Wood",
-    3: "Leaf",
-}
+        # -----------------------------
+        # t-SNE 3D
+        # -----------------------------
+        tsne3d = TSNE(
+            n_components=3,
+            perplexity=tsne_perplexity,
+            learning_rate=tsne_lr,
+            max_iter=tsne_iter,
+            init="pca",
+            random_state=seed,
+            verbose=0
+        )
+        X_tsne3 = tsne3d.fit_transform(X_pre)
+        save_3d_scatter(
+            X_tsne3, y,
+            save_path=os.path.join(out_dir, f"{file_prefix}tsne_3d.png"),
+            show_axis=show_axis
+        )
 
-# =========================
-# 工具函数
-# =========================
-def to_numpy(x):
-    if isinstance(x, torch.Tensor):
-        return x.detach().cpu().numpy()
-    return np.asarray(x)
-
-def subsample(features, labels, max_points=20000, seed=0):
-    n = features.shape[0]
-    if n <= max_points:
-        return features, labels
-    rng = np.random.RandomState(seed)
-    idx = rng.choice(n, max_points, replace=False)
-    return features[idx], labels[idx]
-
-def save_2d_scatter(X, y, save_path, show_axis=False, s=2, alpha=0.6):
-    plt.figure(figsize=(6, 6))
-    for cls in range(4):
-        mask = (y == cls)
-        if mask.any():
-            plt.scatter(X[mask, 0], X[mask, 1], s=s, alpha=alpha, label=CLASS_NAMES[cls])
-    if show_axis:
-        plt.xlabel("Dim 1")
-        plt.ylabel("Dim 2")
-    else:
-        plt.axis("off")
-    plt.legend(frameon=False, markerscale=2)
-    plt.tight_layout(pad=0)
-    plt.savefig(save_path, dpi=600, bbox_inches="tight")
-    plt.close()
-
-def save_3d_scatter(X, y, save_path, show_axis=False, s=2, alpha=0.6):
-    fig = plt.figure(figsize=(6, 6))
-    ax = fig.add_subplot(111, projection="3d")
-    for cls in range(4):
-        mask = (y == cls)
-        if mask.any():
-            ax.scatter(
-                X[mask, 0],
-                X[mask, 1],
-                X[mask, 2],
-                s=s,
-                alpha=alpha,
-                label=CLASS_NAMES[cls]
-            )
-    if show_axis:
-        ax.set_xlabel("Dim 1")
-        ax.set_ylabel("Dim 2")
-        ax.set_zlabel("Dim 3")
-    else:
-        ax.set_axis_off()
-    ax.legend(frameon=False, markerscale=2)
-    plt.tight_layout(pad=0)
-    plt.savefig(save_path, dpi=600, bbox_inches="tight")
-    plt.close()
-
-# =========================
-# 主函数
-# =========================
-def visualize_point_features(
-    point_feat,          # [N, C]
-    labels,              # [N] 0~3
-    out_dir="./vis",
-    file_prefix="",      # 新增：文件名前缀
-    max_points=10000,
-    pca_dim=32,
-    tsne_perplexity=30,
-    tsne_lr=200,
-    tsne_iter=1000,
-    seed=0,
-    show_axis=False
-):
-    os.makedirs(out_dir, exist_ok=True)
-
-    X = to_numpy(point_feat)
-    y = to_numpy(labels).astype(np.int64)
-
-    X, y = subsample(X, y, max_points=max_points, seed=seed)
-
-    # -----------------------------
-    # PCA 2D
-    # -----------------------------
-    X_pca2 = PCA(n_components=2, random_state=seed).fit_transform(X)
-    save_2d_scatter(
-        X_pca2, y,
-        save_path=os.path.join(out_dir, f"{file_prefix}pca_2d.png"),
-        show_axis=show_axis
-    )
-
-    # -----------------------------
-    # PCA 3D
-    # -----------------------------
-    X_pca3 = PCA(n_components=3, random_state=seed).fit_transform(X)
-    save_3d_scatter(
-        X_pca3, y,
-        save_path=os.path.join(out_dir, f"{file_prefix}pca_3d.png"),
-        show_axis=show_axis
-    )
-
-    # -----------------------------
-    # t-SNE 2D
-    # -----------------------------
-    X_pre = PCA(n_components=min(pca_dim, X.shape[1]), random_state=seed).fit_transform(X)
-    tsne2d = TSNE(
-        n_components=2,
-        perplexity=tsne_perplexity,
-        learning_rate=tsne_lr,
-        max_iter=tsne_iter,
-        init="pca",
-        random_state=seed,
-        verbose=0
-    )
-    X_tsne2 = tsne2d.fit_transform(X_pre)
-    save_2d_scatter(
-        X_tsne2, y,
-        save_path=os.path.join(out_dir, f"{file_prefix}tsne_2d.png"),
-        show_axis=show_axis
-    )
-
-    # -----------------------------
-    # t-SNE 3D
-    # -----------------------------
-    tsne3d = TSNE(
-        n_components=3,
-        perplexity=tsne_perplexity,
-        learning_rate=tsne_lr,
-        max_iter=tsne_iter,
-        init="pca",
-        random_state=seed,
-        verbose=0
-    )
-    X_tsne3 = tsne3d.fit_transform(X_pre)
-    save_3d_scatter(
-        X_tsne3, y,
-        save_path=os.path.join(out_dir, f"{file_prefix}tsne_3d.png"),
-        show_axis=show_axis
-    )
-
-# =========================
-# 使用示例
-# =========================
-# point = output['point'].feat
-# labels = segment[idx_part.cpu().numpy()]
-# visualize_point_features(point, labels, out_dir="./feature_vis", file_prefix="exp1_", show_axis=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    # =========================
+    # 使用示例
+    # =========================
+    # point = output['point'].feat
+    # labels = segment[idx_part.cpu().numpy()]
+    # visualize_point_features(point, labels, out_dir="./feature_vis", file_prefix="exp1_", show_axis=True)
 
 
 
@@ -422,10 +387,10 @@ class SemSegTester(TesterBase):
                         pred_part = output["seg_logits"]
 
                         #############
-                        point = output['point'].feat
-                        labels = segment[idx_part.cpu().numpy()]
+                        # point = output['point'].feat
+                        # labels = segment[idx_part.cpu().numpy()]
 
-                        visualize_point_features(point, labels, out_dir="./tsne_vis/our/", file_prefix=f"{data_name}_{i}_", show_axis=True)
+                        # visualize_point_features(point, labels, out_dir="./tsne_vis/our/", file_prefix=f"{data_name}_{i}_", show_axis=True)
 
                         # exit()
 
@@ -456,8 +421,8 @@ class SemSegTester(TesterBase):
                 if self.cfg.data.test.type == "ScanNetPPDataset":
                     pred = pred.topk(3, dim=1)[1].data.cpu().numpy()
                 else:
-                    # pred = pred.max(1)[1].data.cpu().numpy()
-                    pred = pred.cpu().numpy()
+                    pred = pred.max(1)[1].data.cpu().numpy()
+                    # pred = pred.cpu().numpy()
                 if "origin_segment" in data_dict.keys():
                     assert "inverse" in data_dict.keys()
                     pred = pred[data_dict["inverse"]]
@@ -515,9 +480,8 @@ class SemSegTester(TesterBase):
                     )
                 )
 
-            print(pred.shape)
-            if len(pred.shape) > 1:
-                pred = pred.argmax(axis=1)
+            # if len(pred.shape) > 1:
+            #     pred = pred.argmax(axis=1)
            
             intersection, union, target = intersection_and_union(
                 pred, segment, self.cfg.data.num_classes, self.cfg.data.ignore_index

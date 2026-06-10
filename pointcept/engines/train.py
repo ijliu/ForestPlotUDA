@@ -43,13 +43,13 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 # SAM2
-from image_segment.sam2.build_sam import build_sam2
-from image_segment.sam2.sam2_image_predictor import SAM2ImagePredictor
+# from image_segment.sam2.build_sam import build_sam2
+# from image_segment.sam2.sam2_image_predictor import SAM2ImagePredictor
 
-RESOLUTION = 512
-checkpoint = "./image_segment/checkpoints/sam2.1_hiera_large.pt"
-model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
-predictor = SAM2ImagePredictor(build_sam2(model_cfg, checkpoint))
+# RESOLUTION = 512
+# checkpoint = "./image_segment/checkpoints/sam2.1_hiera_large.pt"
+# model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
+# predictor = SAM2ImagePredictor(build_sam2(model_cfg, checkpoint))
 
 
 

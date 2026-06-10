@@ -70,7 +70,7 @@ def save_to_txt(xyz, label, save_path):
     print(f"已保存到: {save_path}")
 
 def handle_process(
-    dataset_root, scene_path, output_path, radius, dev_paths, test_paths
+    dataset_root, scene_path, output_path, dev_paths, test_paths
 ):
     path_names = Path(scene_path).parts
     scene_id = path_names[0] + "_" + path_names[1][:-4]
@@ -86,108 +86,22 @@ def handle_process(
 
     print(f"Processing: {scene_id} in {split_name}")
 
-    coords, segment = read_lasfile(Path(dataset_root, scene_path))
+    coords, segment = read_lasfile(Path(dataset_root, "raw", scene_path))
 
     # 防止精度丢失
     coords = coords - coords.min(0)
 
-    unique_labels = np.unique(segment)
-    counts = np.bincount(segment)
-    result = {int(lbl): int(counts[lbl]) for lbl in unique_labels}
-
-    if radius > 0:
-        max_radius = 40
-        delta_r = 1
-        min_points = 10000
-
-        N = coords.shape[0]
-        point_index = np.arange(N)
-
-        # 提取xy坐标（仅用xy构建KDTree，忽略z轴）
-        xy_coords = coords[:, :2]
-        # 构建xy坐标的KDTree
-        kdtree = KDTree(xy_coords)
-
-        x_max = xy_coords[:, 0].max()
-        y_max = xy_coords[:, 1].max()
-
-        center_x = []
-        cx = 0.0
-        while cx <= x_max:
-            center_x.append(cx)
-            cx += radius
-
-        center_y = []
-        cy = 0.0
-        while cy <= y_max:
-            center_y.append(cy)
-            cy += radius
-
-        index = 0
-        for cx in center_x:
-            for cy in center_y:
-                center = (cx, cy)
-                current_r = radius  # 初始化当前半径
-                valid_data = False  # 标记是否找到满足条件的数据
+    save_dict = dict(
+        coord=coords.astype(np.float32),
+        segment=segment.astype(np.uint8),
+    )
 
 
-                while current_r <= max_radius:
-                    # 根据当前半径查询点
-                    block_index = kdtree.query_ball_point(center, r=current_r)
-                    tmp_coord = coords[block_index]
-                    
-                    # 检查coord是否有内容
-                    if len(tmp_coord) == 0:
-                        # 无内容，直接跳出循环（扩大半径也可能无点）
-                        break
-                    
-                    # 检查点数量是否满足要求
-                    if len(tmp_coord) >= min_points:
-                        # 点数量足够，获取对应数据
-                        tmp_segment = segment[block_index]
-                        tmp_point_index = point_index[block_index]
-                        valid_data = True
-                        break
-                    else:
-                        # 点数量不足，扩大半径继续尝试
-                        current_r += delta_r
-                
-                # 过滤无效数据（无内容或未达到最小点数量）
-                if not valid_data:
-                    continue
+    # Save processed data
+    os.makedirs(output_path, exist_ok=True)
+    for key in save_dict.keys():
+        np.save(os.path.join(output_path, f"{key}.npy"), save_dict[key])
 
-                save_dict = dict(
-                    coord=tmp_coord.astype(np.float32),
-                    segment=tmp_segment.astype(np.uint8),
-                    point_index = tmp_point_index.astype(np.long)
-                )
-
-                os.makedirs(output_path + f"-{index:06d}", exist_ok=True)
-                for key in save_dict.keys():
-                    np.save(os.path.join(output_path + f"-{index:06d}", f"{key}.npy"), save_dict[key])
-
-                # save_to_txt(tmp_coord, tmp_segment.reshape(-1, 1), f"{output_path}-{index:06d}/{scene_id}" + ".txt")
-
-                index += 1
-
-    else:
-        save_dict = dict(
-            coord=coords.astype(np.float32),
-            segment=segment.astype(np.uint8),
-        )
-
-        # print(np.unique(segment))
-        unique_labels = np.unique(segment)
-        counts = np.bincount(segment)
-        result = {int(lbl): int(counts[lbl]) for lbl in unique_labels}
-        save_to_txt(coords, segment.reshape(-1, 1), scene_id + ".txt")
-
-        # Save processed data
-        os.makedirs(output_path, exist_ok=True)
-        for key in save_dict.keys():
-            np.save(os.path.join(output_path, f"{key}.npy"), save_dict[key])
-
-    return result
 
 
 if __name__ == "__main__":
@@ -208,12 +122,7 @@ if __name__ == "__main__":
         type=int,
         help="Num workers for preprocessing.",
     )
-    parser.add_argument(
-        '--radius',
-        default=-1,
-        required=True,
-        type=int,
-    )
+
 
     config = parser.parse_args()
     df = pd.read_csv(
@@ -233,15 +142,6 @@ if __name__ == "__main__":
 
     # Load scene paths
     scene_paths = sorted(dev_paths + test_paths)
-
-    total = {0:0, 1:0, 2:0, 3:0}
-    for fn in scene_paths:
-        nums = handle_process(config.dataset_root, fn, config.output_root, config.radius, dev_paths, test_paths)
-
-        for key in nums.keys():
-            total[key] = total[key] + nums[key]
-    print(total)
-    exit()
 
     # Preprocess data.
     print("Processing scenes...")

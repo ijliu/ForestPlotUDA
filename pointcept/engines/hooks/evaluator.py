@@ -134,6 +134,8 @@ class SemSegEvaluator(HookBase):
             elif "TUWIEN" in input_dict["name"][0]:
                 conditions = "TUWIEN"
 
+            print(conditions)
+
             input_dict['condition'] = conditions
             # input_dict['context'] = torch.zeros((256)).to('cuda')
             ###################
